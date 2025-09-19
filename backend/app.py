@@ -24,7 +24,8 @@ def salted_hash(s: str) -> str:
 
 # Store salted hashes of flags
 flags = {
-    "level1": salted_hash("FLAG{this_is_level1}")
+    "level1": salted_hash("FLAG{this_is_level1}"),
+    "level2": salted_hash("FLAG{this_is_level2}") 
 }
 
 class SubmitFlag(BaseModel):
