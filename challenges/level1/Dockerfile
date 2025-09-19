@@ -16,9 +16,13 @@ COPY flag.txt /home/level1/flag.txt
 RUN chown level1:level1 /home/level1/flag.txt \
  && chmod 640 /home/level1/flag.txt
 
-# Harden SSH
+# Copy entrypoint that regenerates host keys on start
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+# Harden SSH config: disable root login (keep password auth for ease of play)
 RUN sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin no/' /etc/ssh/sshd_config \
  && sed -i 's/#PasswordAuthentication yes/PasswordAuthentication yes/' /etc/ssh/sshd_config
 
 EXPOSE 22
-CMD ["/usr/sbin/sshd", "-D"]
+ENTRYPOINT ["/entrypoint.sh"]

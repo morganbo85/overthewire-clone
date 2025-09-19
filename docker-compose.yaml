@@ -4,8 +4,32 @@ services:
     build: ./backend
     ports:
       - "8000:8000"
+    networks:
+      - frontend
+      - no_egress
+    environment:
+      - FLAG_SALT=replace_with_a_secret_salt   # set a strong random salt in prod
 
   level1:
     build: ./challenges/level1
     ports:
       - "2221:22"
+    networks:
+      - no_egress
+    restart: always
+    # resource limits example (optional)
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+
+networks:
+  # Network that is internal to docker (no external egress)
+  no_egress:
+    driver: bridge
+    internal: true
+
+  # frontend network allows host <-> backend published ports
+  frontend:
+    driver: bridge

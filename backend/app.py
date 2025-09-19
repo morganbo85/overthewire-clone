@@ -1,15 +1,30 @@
-from fastapi import FastAPI, Depends
-from pydantic import BaseModel
+import os
+import time
 import hashlib
+import logging
+from typing import Dict, List
+from fastapi import FastAPI, Request, HTTPException
+from pydantic import BaseModel
+from starlette.responses import JSONResponse
+
+# Basic logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("backend")
 
 app = FastAPI()
 
-# Dummy user storage (use Postgres later)
+# Simple in-memory user store -> replace with Postgres in prod
 users = {"bo": {"password": "testpass", "score": 0}}
 
-# Store flag hashes
+# Use an environment salt for flag hashing (set in docker-compose env)
+FLAG_SALT = os.environ.get("FLAG_SALT", "change_this_now")
+
+def salted_hash(s: str) -> str:
+    return hashlib.sha256((FLAG_SALT + s).encode()).hexdigest()
+
+# Store salted hashes of flags
 flags = {
-    "level1": hashlib.sha256("FLAG{this_is_level1}".encode()).hexdigest()
+    "level1": salted_hash("FLAG{this_is_level1}")
 }
 
 class SubmitFlag(BaseModel):
@@ -18,13 +33,52 @@ class SubmitFlag(BaseModel):
     level: str
     flag: str
 
-@app.post("/submit")
-def submit_flag(data: SubmitFlag):
-    if data.username not in users or users[data.username]["password"] != data.password:
-        return {"status": "error", "message": "Invalid login"}
+# Rate limiter storage: { ip: [timestamps...] }
+_rate_limiter: Dict[str, List[float]] = {}
+RATE_LIMIT = 10           # allowed attempts
+RATE_PERIOD = 60.0        # per seconds (sliding window)
 
-    hashed = hashlib.sha256(data.flag.encode()).hexdigest()
-    if data.level in flags and flags[data.level] == hashed:
-        users[data.username]["score"] += 10
-        return {"status": "ok", "message": "Correct flag!", "score": users[data.username]["score"]}
-    return {"status": "error", "message": "Wrong flag"}
+def is_rate_limited(ip: str) -> bool:
+    now = time.time()
+    window_start = now - RATE_PERIOD
+    timestamps = _rate_limiter.get(ip, [])
+
+    # keep only timestamps in window
+    timestamps = [t for t in timestamps if t >= window_start]
+    _rate_limiter[ip] = timestamps
+
+    if len(timestamps) >= RATE_LIMIT:
+        return True
+
+    # record this attempt
+    _rate_limiter[ip].append(now)
+    return False
+
+@app.middleware("http")
+async def add_process_time_header(request: Request, call_next):
+    # Example middleware; you can extend for logging
+    response = await call_next(request)
+    return response
+
+@app.post("/submit")
+async def submit_flag(request: Request, data: SubmitFlag):
+    client_ip = request.client.host
+
+    if is_rate_limited(client_ip):
+        logger.warning("Rate-limited submit attempt from %s", client_ip)
+        raise HTTPException(status_code=429, detail="Too many attempts. Slow down.")
+
+    # auth (move to hashed password + DB in prod)
+    user = users.get(data.username)
+    if not user or user["password"] != data.password:
+        logger.info("Invalid login attempt for user=%s from %s", data.username, client_ip)
+        raise HTTPException(status_code=401, detail="Invalid login")
+
+    hashed = salted_hash(data.flag)
+    target = flags.get(data.level)
+    if target and hashed == target:
+        user["score"] += 10
+        logger.info("Correct flag for %s by %s", data.level, data.username)
+        return JSONResponse({"status": "ok", "message": "Correct flag!", "score": user["score"]})
+    logger.info("Wrong flag for %s by %s from %s", data.level, data.username, client_ip)
+    raise HTTPException(status_code=400, detail="Wrong flag")
