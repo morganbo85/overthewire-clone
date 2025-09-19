@@ -2,12 +2,9 @@ FROM ubuntu:22.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Install packages
+# Make sure apt works reliably and curl gets installed
 RUN apt-get update \
- && apt-get install -y --no-install-recommends \
-      openssh-server \
-      sudo \
-      curl \
+ && apt-get install -y curl openssh-server sudo \
  && rm -rf /var/lib/apt/lists/* \
  && mkdir /var/run/sshd
 
