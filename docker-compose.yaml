@@ -18,6 +18,15 @@ services:
       - no_egress
       - frontend
     restart: always
+
+  jump:
+    build: ./challenges/jump
+    ports:
+      - "2222:22"
+    networks:
+      - no_egress
+    restart: always
+
     # resource limits example (optional)
     deploy:
       resources:
