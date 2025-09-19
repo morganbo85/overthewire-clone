@@ -19,6 +19,16 @@ services:
       - frontend
     restart: always
 
+  level2:
+    build: ./challenges/level2
+    ports:
+      - "2223:22"
+    networks:
+      - no_egress
+      - frontend
+    restart: always
+
+
   jump:
     build: ./challenges/jump
     ports:
