@@ -16,6 +16,7 @@ services:
       - "2221:22"
     networks:
       - no_egress
+      - frontend
     restart: always
     # resource limits example (optional)
     deploy:
