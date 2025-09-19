@@ -1,0 +1,11 @@
+version: "3.9"
+services:
+  backend:
+    build: ./backend
+    ports:
+      - "8000:8000"
+
+  level1:
+    build: ./challenges/level1
+    ports:
+      - "2221:22"

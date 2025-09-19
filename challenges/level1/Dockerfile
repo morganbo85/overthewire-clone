@@ -1,0 +1,20 @@
+FROM ubuntu:22.04
+
+RUN apt-get update && apt-get install -y openssh-server sudo \
+    && mkdir /var/run/sshd
+
+# Create a user for the challenge
+RUN useradd -m -s /bin/bash level1 \
+    && echo 'level1:level1pass' | chpasswd
+
+# Add the flag
+COPY flag.txt /home/level1/flag.txt
+RUN chown level1:level1 /home/level1/flag.txt \
+    && chmod 640 /home/level1/flag.txt
+
+# Harden SSH
+RUN sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin no/' /etc/ssh/sshd_config \
+    && sed -i 's/#PasswordAuthentication yes/PasswordAuthentication yes/' /etc/ssh/sshd_config
+
+EXPOSE 22
+CMD ["/usr/sbin/sshd", "-D"]
