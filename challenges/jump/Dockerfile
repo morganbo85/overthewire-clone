@@ -1,21 +1,22 @@
 FROM ubuntu:22.04
 
-RUN apt-get update && apt-get install -y openssh-server ssh sudo \
-    && mkdir /var/run/sshd
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends openssh-server sudo curl jq openssh-client \
+ && rm -rf /var/lib/apt/lists/* \
+ && mkdir /var/run/sshd
 
-# Create a jump user
-RUN useradd -m -s /bin/bash jump \
-    && echo 'jump:jumppass' | chpasswd
+# jump user for all players (MVP); later switch to per-user + SSH keys
+RUN useradd -m -s /usr/local/bin/jump-shell jump \
+ && echo 'jump:jumppass' | chpasswd
 
-# Force the jump user to always proxy into level1
-RUN echo 'command="ssh -o StrictHostKeyChecking=no level1" jump' >> /home/jump/.ssh/authorized_keys || true
+# Script used as the login shell (forced)
+COPY jump-shell.sh /usr/local/bin/jump-shell
+RUN chmod +x /usr/local/bin/jump-shell \
+ && chown root:root /usr/local/bin/jump-shell
 
-# Harden SSH
+# sshd config hardening (no root ssh, allow password for MVP)
 RUN sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin no/' /etc/ssh/sshd_config \
-    && sed -i 's/#PasswordAuthentication yes/PasswordAuthentication yes/' /etc/ssh/sshd_config
+ && sed -i 's/#PasswordAuthentication yes/PasswordAuthentication yes/' /etc/ssh/sshd_config
 
 EXPOSE 22
 CMD ["/usr/sbin/sshd", "-D"]
-
-COPY sshd_config.sh /sshd_config.sh
-RUN bash /sshd_config.sh

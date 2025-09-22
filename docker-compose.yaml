@@ -1,55 +1,60 @@
 version: "3.9"
 services:
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: game
+      POSTGRES_PASSWORD: gamepass
+      POSTGRES_DB: game
+    volumes:
+      - dbdata:/var/lib/postgresql/data
+    networks:
+      - no_egress
+
   backend:
     build: ./backend
+    depends_on:
+      - db
+    environment:
+      - DATABASE_URL=postgresql+psycopg2://game:gamepass@db:5432/game
+      - FLAG_SALT=replace_with_a_secret_salt
+      - INITIAL_ADMIN=bo:testpass         # optional bootstrap user
     ports:
       - "8000:8000"
     networks:
       - frontend
       - no_egress
-    environment:
-      - FLAG_SALT=replace_with_a_secret_salt   # set a strong random salt in prod
 
   level1:
     build: ./challenges/level1
-    ports:
-      - "2221:22"
     networks:
       - no_egress
-      - frontend
     restart: always
 
   level2:
     build: ./challenges/level2
-    ports:
-      - "2223:22"
     networks:
       - no_egress
-      - frontend
     restart: always
-
 
   jump:
     build: ./challenges/jump
+    depends_on:
+      - backend
+      - level1
+      - level2
     ports:
       - "2222:22"
     networks:
       - no_egress
     restart: always
 
-    # resource limits example (optional)
-    deploy:
-      resources:
-        limits:
-          cpus: '0.5'
-          memory: 256M
-
 networks:
-  # Network that is internal to docker (no external egress)
   no_egress:
     driver: bridge
     internal: true
-
-  # frontend network allows host <-> backend published ports
   frontend:
     driver: bridge
+
+volumes:
+  dbdata:
