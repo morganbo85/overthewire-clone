@@ -6,6 +6,8 @@ from pydantic import BaseModel
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import sessionmaker
 from passlib.hash import bcrypt
+from sqlalchemy.exc import OperationalError
+import time
 
 from models import Base, User, Level, Submission
 
@@ -59,6 +61,16 @@ class SubmitIn(BaseModel):
 
 @app.on_event("startup")
 def startup():
+    def startup():
+        for i in range(10):   # retry up to ~30s
+            try:
+                Base.metadata.create_all(engine)
+                break
+            except OperationalError:
+                log.warning("DB not ready, retrying in 3s...")
+                time.sleep(3)
+        else:
+            raise RuntimeError("Database never came up")
     # create tables
     Base.metadata.create_all(engine)
     # seed levels if empty
