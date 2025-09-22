@@ -1,4 +1,5 @@
 version: "3.9"
+
 services:
   db:
     image: postgres:15
@@ -18,7 +19,7 @@ services:
     environment:
       - DATABASE_URL=postgresql+psycopg2://game:gamepass@db:5432/game
       - FLAG_SALT=replace_with_a_secret_salt
-      - INITIAL_ADMIN=bo:testpass         # optional bootstrap user
+      - INITIAL_ADMIN=bo:testpass    # optional bootstrap user
     ports:
       - "8000:8000"
     networks:
