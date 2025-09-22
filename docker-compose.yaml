@@ -44,7 +44,7 @@ services:
       - level1
       - level2
     ports:
-      - "2222:22"
+      - "3333:22"
     networks:
       - no_egress
     restart: always
