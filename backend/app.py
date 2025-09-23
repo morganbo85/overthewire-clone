@@ -1,13 +1,11 @@
-import os, time, hashlib, logging
-from typing import List, Dict, Optional
+import os, time, hashlib, logging, json
+from typing import List, Dict
 from fastapi import FastAPI, Request, HTTPException, Depends
-from fastapi.responses import JSONResponse
 from pydantic import BaseModel
-from sqlalchemy import create_engine, select
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker, Session
 from passlib.hash import bcrypt
 from sqlalchemy.exc import OperationalError
-import time
 
 from models import Base, User, Level, Submission
 
@@ -23,7 +21,7 @@ SessionLocal = sessionmaker(engine, expire_on_commit=False, future=True)
 def salted_hash(s: str) -> str:
     return hashlib.sha256((FLAG_SALT + s).encode()).hexdigest()
 
-# simple in-memory limiter (swap to Redis later)
+# simple in-memory limiter
 _RATE: Dict[str, List[float]] = {}
 RATE_LIMIT = 10
 RATE_PERIOD = 60.0
@@ -59,37 +57,59 @@ class SubmitIn(BaseModel):
     password: str
     flag: str
 
+def seed_levels_from_json(db: Session):
+    path = os.path.join(os.path.dirname(__file__), "levels.json")
+    if not os.path.exists(path):
+        log.warning("levels.json not found, skipping level seeding")
+        return
+
+    with open(path, "r") as f:
+        levels = json.load(f)
+
+    for lvl in levels:
+        hashed = salted_hash(lvl["flag"])
+        existing = db.get(Level, lvl["id"])
+        if existing:
+            existing.name = lvl["name"]
+            existing.flag_hash = hashed
+            existing.points = lvl.get("points", 0)
+        else:
+            db.add(Level(
+                id=lvl["id"],
+                name=lvl["name"],
+                flag_hash=hashed,
+                points=lvl.get("points", 0)
+            ))
+    db.commit()
+    log.info("Seeded %d levels from levels.json", len(levels))
+
 @app.on_event("startup")
 def startup():
-    def startup():
-        for i in range(10):   # retry up to ~30s
-            try:
-                Base.metadata.create_all(engine)
-                break
-            except OperationalError:
-                log.warning("DB not ready, retrying in 3s...")
-                time.sleep(3)
-        else:
-            raise RuntimeError("Database never came up")
-    # create tables
-    Base.metadata.create_all(engine)
-    # seed levels if empty
+    # retry DB connection
+    for i in range(10):
+        try:
+            Base.metadata.create_all(engine)
+            break
+        except OperationalError:
+            log.warning("DB not ready, retrying in 3s...")
+            time.sleep(3)
+    else:
+        raise RuntimeError("Database never came up")
+
     with SessionLocal() as db:
-        if db.query(Level).count() == 0:
-            # Seed Level1 & Level2
-            lvls = [
-                Level(id=1, name="Read a file", flag_hash=salted_hash("FLAG{this_is_level1}"), points=10),
-                Level(id=2, name="Hidden files", flag_hash=salted_hash("FLAG{this_is_level2}"), points=10),
-            ]
-            for L in lvls:
-                db.merge(L)
-            db.commit()
+        seed_levels_from_json(db)
+
         # optional initial admin/user
         init = os.environ.get("INITIAL_ADMIN")
         if init:
             uname, pwd = init.split(":", 1)
             if not db.query(User).filter_by(username=uname).first():
-                db.add(User(username=uname, password_hash=bcrypt.hash(pwd), score=0, current_level=1))
+                db.add(User(
+                    username=uname,
+                    password_hash=bcrypt.hash(pwd),
+                    score=0,
+                    current_level=1
+                ))
                 db.commit()
 
 @app.post("/register")
@@ -113,7 +133,6 @@ def login(data: LoginIn, request: Request, db=Depends(get_db)):
 
 @app.get("/progress")
 def progress(username: str, request: Request, db=Depends(get_db)):
-    # for jump server: no password to keep it simple in MVP (can change to token later)
     if rate_limited(request.client.host):
         raise HTTPException(429, "Too many attempts")
     u = db.query(User).filter_by(username=username).first()
@@ -130,22 +149,17 @@ def submit(data: SubmitIn, request: Request, db=Depends(get_db)):
     if not u or not bcrypt.verify(data.password, u.password_hash):
         raise HTTPException(401, "Invalid credentials")
 
-    # fetch current level record
-    L = db.query(Level).filter_by(id=u.current_level).first()
+    L = db.get(Level, u.current_level)
     if not L:
         raise HTTPException(400, "Level not configured")
 
-    # check flag
     ok = (salted_hash(data.flag) == L.flag_hash)
-
-    # log submission
     db.add(Submission(user_id=u.id, level_id=L.id, flag_text=data.flag, correct=ok))
     db.commit()
 
     if not ok:
         raise HTTPException(400, "Wrong flag")
 
-    # award points and advance
     u.score += L.points
     u.current_level = u.current_level + 1
     db.commit()
