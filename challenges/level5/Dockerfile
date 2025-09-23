@@ -4,7 +4,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 # Install tools
 RUN apt-get update \
- && apt-get install -y --no-install-recommends openssh-server sudo curl xxd \
+ && apt-get install -y --no-install-recommends openssh-server sudo curl binutils \
  && rm -rf /var/lib/apt/lists/* \
  && mkdir /var/run/sshd
 
