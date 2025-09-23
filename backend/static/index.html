@@ -35,29 +35,32 @@
     <p id="submitResult"></p>
   </div>
 
-  <script>
+<script>
     let uname = "", pwd = "";
-    const backend = window.location.origin;
+    const backend = "http://66.228.57.35:8000";
 
     async function register() {
       uname = document.getElementById('username').value;
       pwd = document.getElementById('password').value;
-      const res = await fetch(backend+"/register", {
-        method: "POST", headers: { "Content-Type":"application/json" },
+      const res = await fetch(backend + "/register", {
+        method: "POST",
+        headers: { "Content-Type":"application/json" },
         body: JSON.stringify({username:uname,password:pwd})
       });
-      alert(await res.text());
+      const data = await res.json();
+      alert("Register: " + JSON.stringify(data));
     }
 
     async function login() {
       uname = document.getElementById('username').value;
       pwd = document.getElementById('password').value;
-      const res = await fetch(backend+"/login", {
-        method:"POST", headers: { "Content-Type":"application/json" },
+      const res = await fetch(backend + "/login", {
+        method:"POST",
+        headers: { "Content-Type":"application/json" },
         body: JSON.stringify({username:uname,password:pwd})
       });
+      const data = await res.json();
       if(res.ok) {
-        const data = await res.json();
         document.getElementById('dashboard').style.display="block";
         document.getElementById('submitBox').style.display="block";
         document.getElementById('user').textContent = data.username;
@@ -65,17 +68,19 @@
         document.getElementById('level').textContent = data.current_level;
         document.getElementById('score').textContent = data.score;
       } else {
-        alert("Login failed");
+        alert("Login error: " + JSON.stringify(data));
       }
     }
 
     async function submitFlag() {
       const flag = document.getElementById('flag').value;
       const res = await fetch(backend+"/submit", {
-        method:"POST", headers: { "Content-Type":"application/json" },
+        method:"POST",
+        headers: { "Content-Type":"application/json" },
         body: JSON.stringify({username:uname,password:pwd,flag})
       });
-      document.getElementById('submitResult').textContent = await res.text();
+      const data = await res.json();
+      document.getElementById('submitResult').textContent = JSON.stringify(data);
     }
   </script>
 </body>
