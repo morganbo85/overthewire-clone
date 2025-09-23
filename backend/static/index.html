@@ -35,7 +35,7 @@
 
   <script>
     let uname = "", pwd = "";
-    const backend = "http://YOUR.SERVER.IP:8000";
+    const backend = window.location.origin;
 
     async function register() {
       uname = document.getElementById('username').value;
