@@ -38,9 +38,6 @@ def rate_limited(ip: str) -> bool:
 
 app = FastAPI()
 
-# Serve static GUI
-app.mount("/", StaticFiles(directory="static", html=True), name="static")
-
 def get_db():
     db = SessionLocal()
     try:
@@ -172,3 +169,6 @@ def submit(data: SubmitIn, request: Request, db=Depends(get_db)):
     db.commit()
     log.info("User %s advanced to level %d (score=%d)", u.username, u.current_level, u.score)
     return {"status": "ok", "message": "Correct flag! Advanced.", "next_level": u.current_level, "score": u.score}
+
+# Serve static GUI
+app.mount("/", StaticFiles(directory="static", html=True), name="static")
