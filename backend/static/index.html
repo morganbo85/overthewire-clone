@@ -14,28 +14,27 @@
     <h3>Register / Login</h3>
     <input id="username" placeholder="username"><br>
     <input id="password" type="password" placeholder="password"><br>
-    <!-- prevent form submit -->
+    <!-- prevent accidental form submit -->
     <button type="button" onclick="register()">Register</button>
     <button type="button" onclick="login()">Login</button>
   </div>
-
 
   <div id="dashboard" class="box" style="display:none;">
     <h3>Welcome, <span id="user"></span></h3>
     <p>Current level: <span id="level"></span> | Score: <span id="score"></span></p>
     <p>Connect via SSH:</p>
-    <pre>ssh jump@YOUR.SERVER.IP -p 3333</pre>
+    <pre>ssh jump@66.228.57.35 -p 3333</pre>
     <p>When prompted, enter your game username (<span id="user2"></span>)</p>
   </div>
 
   <div id="submitBox" class="box" style="display:none;">
     <h3>Submit Flag</h3>
     <input id="flag" placeholder="FLAG{...}">
-    <button onclick="submitFlag()">Submit</button>
+    <button type="button" onclick="submitFlag()">Submit</button>
     <p id="submitResult"></p>
   </div>
 
-<script>
+  <script>
     let uname = "", pwd = "";
     const backend = "http://66.228.57.35:8000";
 
