@@ -37,6 +37,9 @@ def rate_limited(ip: str) -> bool:
 
 app = FastAPI()
 
+# Serve static GUI
+app.mount("/", StaticFiles(directory="static", html=True), name="static")
+
 def get_db():
     db = SessionLocal()
     try:
