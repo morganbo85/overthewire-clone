@@ -170,5 +170,5 @@ def submit(data: SubmitIn, request: Request, db=Depends(get_db)):
     log.info("User %s advanced to level %d (score=%d)", u.username, u.current_level, u.score)
     return {"status": "ok", "message": "Correct flag! Advanced.", "next_level": u.current_level, "score": u.score}
 
-# Serve static GUI
-app.mount("/", StaticFiles(directory="static", html=True), name="static")
+# Serve static GUI under /gui
+app.mount("/gui", StaticFiles(directory="static", html=True), name="static")
