@@ -44,6 +44,18 @@ services:
       - no_egress
     restart: always
 
+  level4:
+    build: ./challenges/level4
+    networks:
+      - no_egress
+    restart: always
+  
+  level5:
+    build: ./challenges/level5
+    networks:
+      - no_egress
+    restart: always
+  
   jump:
     build: ./challenges/jump
     depends_on:
@@ -51,6 +63,8 @@ services:
       - level1
       - level2
       - level3 
+      - level4
+      - level5
     ports:
       - "3333:22"
     networks:
