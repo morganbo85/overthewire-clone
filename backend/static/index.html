@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Linux Wargame</title>
+  <style>
+    body { font-family: sans-serif; max-width: 600px; margin: 2rem auto; }
+    .box { border: 1px solid #ccc; padding: 1rem; margin-bottom: 1rem; border-radius: 8px; }
+  </style>
+</head>
+<body>
+  <h1>Linux Learning Wargame</h1>
+  <div class="box">
+    <h3>Register / Login</h3>
+    <input id="username" placeholder="username"><br>
+    <input id="password" type="password" placeholder="password"><br>
+    <button onclick="register()">Register</button>
+    <button onclick="login()">Login</button>
+  </div>
+
+  <div id="dashboard" class="box" style="display:none;">
+    <h3>Welcome, <span id="user"></span></h3>
+    <p>Current level: <span id="level"></span> | Score: <span id="score"></span></p>
+    <p>Connect via SSH:</p>
+    <pre>ssh jump@YOUR.SERVER.IP -p 3333</pre>
+    <p>When prompted, enter your game username (<span id="user2"></span>)</p>
+  </div>
+
+  <div id="submitBox" class="box" style="display:none;">
+    <h3>Submit Flag</h3>
+    <input id="flag" placeholder="FLAG{...}">
+    <button onclick="submitFlag()">Submit</button>
+    <p id="submitResult"></p>
+  </div>
+
+  <script>
+    let uname = "", pwd = "";
+    const backend = "http://YOUR.SERVER.IP:8000";
+
+    async function register() {
+      uname = document.getElementById('username').value;
+      pwd = document.getElementById('password').value;
+      const res = await fetch(backend+"/register", {
+        method: "POST", headers: { "Content-Type":"application/json" },
+        body: JSON.stringify({username:uname,password:pwd})
+      });
+      alert(await res.text());
+    }
+
+    async function login() {
+      uname = document.getElementById('username').value;
+      pwd = document.getElementById('password').value;
+      const res = await fetch(backend+"/login", {
+        method:"POST", headers: { "Content-Type":"application/json" },
+        body: JSON.stringify({username:uname,password:pwd})
+      });
+      if(res.ok) {
+        const data = await res.json();
+        document.getElementById('dashboard').style.display="block";
+        document.getElementById('submitBox').style.display="block";
+        document.getElementById('user').textContent = data.username;
+        document.getElementById('user2').textContent = data.username;
+        document.getElementById('level').textContent = data.current_level;
+        document.getElementById('score').textContent = data.score;
+      } else {
+        alert("Login failed");
+      }
+    }
+
+    async function submitFlag() {
+      const flag = document.getElementById('flag').value;
+      const res = await fetch(backend+"/submit", {
+        method:"POST", headers: { "Content-Type":"application/json" },
+        body: JSON.stringify({username:uname,password:pwd,flag})
+      });
+      document.getElementById('submitResult').textContent = await res.text();
+    }
+  </script>
+</body>
+</html>

@@ -21,7 +21,7 @@ SessionLocal = sessionmaker(engine, expire_on_commit=False, future=True)
 def salted_hash(s: str) -> str:
     return hashlib.sha256((FLAG_SALT + s).encode()).hexdigest()
 
-# simple in-memory limiter
+# simple in-memory rate limiter
 _RATE: Dict[str, List[float]] = {}
 RATE_LIMIT = 10
 RATE_PERIOD = 60.0
@@ -58,6 +58,7 @@ class SubmitIn(BaseModel):
     flag: str
 
 def seed_levels_from_json(db: Session):
+    """Seed or update levels table from levels.json."""
     path = os.path.join(os.path.dirname(__file__), "levels.json")
     if not os.path.exists(path):
         log.warning("levels.json not found, skipping level seeding")
@@ -84,7 +85,7 @@ def seed_levels_from_json(db: Session):
     log.info("Seeded %d levels from levels.json", len(levels))
 
 @app.on_event("startup")
-def startup():
+def on_startup():
     # retry DB connection
     for i in range(10):
         try:
@@ -111,6 +112,7 @@ def startup():
                     current_level=1
                 ))
                 db.commit()
+                log.info("Created initial admin %s", uname)
 
 @app.post("/register")
 def register(data: RegisterIn, request: Request, db=Depends(get_db)):
@@ -119,8 +121,9 @@ def register(data: RegisterIn, request: Request, db=Depends(get_db)):
     if db.query(User).filter_by(username=data.username).first():
         raise HTTPException(400, "Username exists")
     u = User(username=data.username, password_hash=bcrypt.hash(data.password), score=0, current_level=1)
-    db.add(u); db.commit()
-    return {"status":"ok","message":"registered"}
+    db.add(u)
+    db.commit()
+    return {"status": "ok", "message": "registered"}
 
 @app.post("/login")
 def login(data: LoginIn, request: Request, db=Depends(get_db)):
@@ -129,7 +132,7 @@ def login(data: LoginIn, request: Request, db=Depends(get_db)):
     u = db.query(User).filter_by(username=data.username).first()
     if not u or not bcrypt.verify(data.password, u.password_hash):
         raise HTTPException(401, "Invalid credentials")
-    return {"status":"ok","username":u.username,"current_level":u.current_level,"score":u.score}
+    return {"status": "ok", "username": u.username, "current_level": u.current_level, "score": u.score}
 
 @app.get("/progress")
 def progress(username: str, request: Request, db=Depends(get_db)):
@@ -164,4 +167,4 @@ def submit(data: SubmitIn, request: Request, db=Depends(get_db)):
     u.current_level = u.current_level + 1
     db.commit()
     log.info("User %s advanced to level %d (score=%d)", u.username, u.current_level, u.score)
-    return {"status":"ok","message":"Correct flag! Advanced.","next_level":u.current_level,"score":u.score}
+    return {"status": "ok", "message": "Correct flag! Advanced.", "next_level": u.current_level, "score": u.score}

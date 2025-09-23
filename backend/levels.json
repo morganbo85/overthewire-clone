@@ -1,32 +1,7 @@
 [
-  {
-    "id": 1,
-    "name": "Intro",
-    "flag": "FLAG{this_is_level1}",
-    "points": 10
-  },
-  {
-    "id": 2,
-    "name": "Hidden files",
-    "flag": "FLAG{this_is_level2}",
-    "points": 10
-  },
-  {
-    "id": 3,
-    "name": "File permissions",
-    "flag": "FLAG{this_is_level3}",
-    "points": 10
-  },
-  {
-    "id": 4,
-    "name": "Reading clues in files",
-    "flag": "FLAG{this_is_level4}",
-    "points": 10
-  },
-  {
-    "id": 5,
-    "name": "Strings in binaries",
-    "flag": "FLAG{this_is_level5}",
-    "points": 10
-  }
+  { "id": 1, "name": "Read a file", "flag": "FLAG{this_is_level1}", "points": 10 },
+  { "id": 2, "name": "Hidden files", "flag": "FLAG{this_is_level2}", "points": 10 },
+  { "id": 3, "name": "File permissions", "flag": "FLAG{this_is_level3}", "points": 15 },
+  { "id": 4, "name": "Search with grep", "flag": "FLAG{this_is_level4}", "points": 15 },
+  { "id": 5, "name": "Strings in binaries", "flag": "FLAG{this_is_level5}", "points": 20 }
 ]
