@@ -37,6 +37,12 @@ services:
     networks:
       - no_egress
     restart: always
+   
+  level3:
+    build: ./challenges/level3
+    networks:
+      - no_egress
+    restart: always
 
   jump:
     build: ./challenges/jump
@@ -44,6 +50,7 @@ services:
       - backend
       - level1
       - level2
+      - level3 
     ports:
       - "3333:22"
     networks:
